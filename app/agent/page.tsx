@@ -30,6 +30,8 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { parseEther } from "viem";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from 'remark-gfm'; 
 
 type Message = {
   id: number;
@@ -148,7 +150,7 @@ export default function Component() {
         "Aave User Data",
       ];
 
-      if (!validActions.includes(action) || action == "askbrian") {
+      if (action == "askbrian") {
         const askResult = await brian.ask({
           prompt: messageToSend,
           kb: "taiko_kb",
@@ -326,19 +328,23 @@ export default function Component() {
                       : "bg-zinc-800 bg-opacity-90 backdrop-blur-sm"
                   )}
                 >
-                  <p className="text-sm font-mono">{message.text}</p>
-                  {/* {message.actions && (
-                    <div className="flex gap-2 mt-2">
-                      {message.actions.map((action) => (
-                        <button
-                          key={action}
-                          className="text-xs text-zinc-400 hover:text-white transition-colors"
-                        >
-                          {action}
-                        </button>
-                      ))}
-                    </div>
-                  )} */}
+                  {message.sender === "ai" ? (
+                    <ReactMarkdown 
+                      className="text-sm font-mono" 
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        // Remove empty paragraphs that only contain quotes
+                        p: ({children}) => {
+                          if (children && children.toString().trim() === '"') return null;
+                          return <p>{children}</p>;
+                        }
+                      }}
+                    >
+                      {message.text}
+                    </ReactMarkdown>
+                  ) : (
+                    <p className="text-sm font-mono">{message.text}</p>
+                  )}
                 </div>
               </motion.div>
             ))}
