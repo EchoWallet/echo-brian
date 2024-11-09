@@ -47,6 +47,30 @@ type TransactionStep = {
   from: string;
 };
 
+type Action =
+  | "swap"
+  | "transfer"
+  | "bridge"
+  | "balance"
+  | "wrap native"
+  | "unwrap native"
+  | "totalsupply"
+  | "approve"
+  | "deposit"
+  | "stake on Lido"
+  | "withdraw"
+  | "ENS Forward Resolution"
+  | "ENS Reverse Resolution"
+  | "ENS Availability"
+  | "ENS Expiration"
+  | "ENS Registration Cost"
+  | "ENS Renewal Cost"
+  | "ENS Registration"
+  | "ENS Renewal"
+  | "AAVE Borrow"
+  | "AAVE Repay"
+  | "Aave User Data";
+
 export default function Component() {
   const { address, chainId } = useAccount();
 
@@ -96,6 +120,52 @@ export default function Component() {
       }
 
       console.log("Extracted transaction message:", result);
+
+      // Check if the action is valid
+      const action: string = result.completion[0].action;
+      const validActions = [
+        "swap",
+        "transfer",
+        "bridge",
+        "balance",
+        "wrap native",
+        "unwrap native",
+        "totalsupply",
+        "approve",
+        "deposit",
+        "stake on Lido",
+        "withdraw",
+        "ENS Forward Resolution",
+        "ENS Reverse Resolution",
+        "ENS Availability",
+        "ENS Expiration",
+        "ENS Registration Cost",
+        "ENS Renewal Cost",
+        "ENS Registration",
+        "ENS Renewal",
+        "AAVE Borrow",
+        "AAVE Repay",
+        "Aave User Data",
+      ];
+
+      if (!validActions.includes(action) || action == "askbrian") {
+        const askResult = await brian.ask({
+          prompt: messageToSend,
+          kb: "taiko_kb",
+        });
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            text: askResult.answer,
+            sender: "ai",
+          },
+        ]);
+
+        console.log(askResult, "askResult");
+        return;
+      }
 
       const transactionResult = await brian.transact({
         ...result,
