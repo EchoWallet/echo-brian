@@ -23,21 +23,38 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { brian } from "@/lib/brain";
+import {
+  useAccount,
+  useSendTransaction,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { parseEther } from "viem";
 
 type Message = {
   id: number;
   text: string;
   sender: "user" | "ai";
-  actions?: string[];
+};
+
+type TransactionStep = {
+  chainId: number;
+  to: string;
+  data: string;
+  value: string;
+  gasLimit: string;
+  blockNumber: number;
+  from: string;
 };
 
 export default function Component() {
+  const { address, chainId } = useAccount();
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
       text: "Hello! How can I assist you today?",
       sender: "ai",
-      actions: ["Copy", "Like", "Dislike"],
     },
     {
       id: 2,
@@ -48,18 +65,107 @@ export default function Component() {
       id: 3,
       text: "Hi there! It's great to see you. How can I help you today?",
       sender: "ai",
-      actions: ["Copy", "Like", "Dislike"],
     },
   ]);
   const [inputMessage, setInputMessage] = useState("");
 
-  const handleSendMessage = () => {
+  const {
+    data: hash,
+    error,
+    isPending,
+    sendTransaction,
+  } = useSendTransaction();
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
+
+  const sendTx = async (message: string) => {
+    try {
+      const messageToSend = message;
+      setInputMessage("");
+
+      const result = await brian.extract({
+        prompt: messageToSend,
+      });
+
+      if (!result) {
+        console.error("Failed to extract transaction message", result);
+        return;
+      }
+
+      console.log("Extracted transaction message:", result);
+
+      const transactionResult = await brian.transact({
+        ...result,
+        address: address!,
+        chainId: `${chainId!}`,
+      });
+
+      if (!transactionResult[0].data.steps) {
+        console.error("No steps found in transaction result");
+        return;
+      }
+
+      console.log("Transaction steps:", transactionResult[0]);
+
+      // Add AI response to messages
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: prev.length + 1,
+          text: transactionResult[0].data.description,
+          sender: "ai",
+        },
+      ]);
+
+      // Execute each transaction step
+      for (const step of transactionResult[0].data.steps) {
+        await sendTransaction({
+          to: step.to as `0x${string}`,
+          data: step.data as `0x${string}`,
+          value: BigInt(step.value || "0"),
+          // @ts-ignore
+          gas: BigInt(step.gasLimit!),
+          chainId: step.chainId,
+        });
+      }
+    } catch (error) {
+      console.error("Transaction failed:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: prev.length + 1,
+          text:
+            "Transaction failed: " +
+            ((error as any)?.shortMessage || "Please try again"),
+          sender: "ai",
+        },
+      ]);
+    }
+  };
+
+  const handleSendMessage = async () => {
     if (inputMessage.trim()) {
       setMessages((prev) => [
         ...prev,
         { id: prev.length + 1, text: inputMessage, sender: "user" },
       ]);
-      setInputMessage("");
+
+      try {
+        await sendTx(inputMessage);
+      } catch (error) {
+        console.error("Failed to send transaction:", error);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            text: "Failed to send transaction. Please try again.",
+            sender: "ai",
+          },
+        ]);
+      }
     }
   };
 
@@ -151,7 +257,7 @@ export default function Component() {
                   )}
                 >
                   <p className="text-sm font-mono">{message.text}</p>
-                  {message.actions && (
+                  {/* {message.actions && (
                     <div className="flex gap-2 mt-2">
                       {message.actions.map((action) => (
                         <button
@@ -162,7 +268,7 @@ export default function Component() {
                         </button>
                       ))}
                     </div>
-                  )}
+                  )} */}
                 </div>
               </motion.div>
             ))}
@@ -180,7 +286,11 @@ export default function Component() {
           <Input
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+            onKeyDown={async (e) => {
+              if (e.key === "Enter") {
+                await handleSendMessage();
+              }
+            }}
             placeholder="Send a message..."
             className="flex-1 bg-transparent border-0 focus-visible:ring-0 text-white placeholder:text-zinc-400"
           />
@@ -190,13 +300,29 @@ export default function Component() {
           </Button>
           <Button
             onClick={handleSendMessage}
+            disabled={isPending}
             size="icon"
             className="bg-blue-600 hover:bg-blue-700 rounded-full"
           >
-            <Send className="h-5 w-5" />
+            {isPending ? "Confirming..." : <Send className="h-5 w-5" />}
             <span className="sr-only">Send message</span>
           </Button>
         </div>
+        {error && (
+          <div className="text-red-500 text-sm mt-2">
+            Error: {(error as any).shortMessage || error.message}
+          </div>
+        )}
+        {isConfirming && (
+          <div className="text-zinc-400 text-sm mt-2">
+            Waiting for confirmation...
+          </div>
+        )}
+        {isConfirmed && (
+          <div className="text-green-500 text-sm mt-2">
+            Transaction confirmed!
+          </div>
+        )}
       </div>
     </div>
   );
