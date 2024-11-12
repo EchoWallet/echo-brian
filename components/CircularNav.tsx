@@ -2,8 +2,9 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Menu, MessageSquare, History, Wallet } from "lucide-react";
+import { useStore, NavItem } from "@/store/store";
 
-interface NavItem {
+interface NavItemAngs {
   icon: React.ElementType;
   label: string;
   angle: number;
@@ -13,12 +14,13 @@ const CircularNav = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [angle, setAngle] = useState(0);
-  const [selectedItem, setSelectedItem] = useState<number | null>(null);
+  //   const [selectedItem, setSelectedItem] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const { selectedNavItem, setSelectedNavItem, reset } = useStore();
 
-  const navItems: NavItem[] = [
+  const navItems: NavItemAngs[] = [
     { icon: Wallet, label: "Assets", angle: 0 },
     { icon: MessageSquare, label: "AI Chat", angle: 45 },
     { icon: History, label: "History", angle: 90 },
@@ -47,18 +49,18 @@ const CircularNav = () => {
 
     // If we were in long-press mode (isDragging), handle the selection and close
     if (isDragging) {
-      if (selectedItem !== null) {
-        console.log(`Selected via drag: ${navItems[selectedItem].label}`);
+      if (selectedNavItem !== null) {
+        console.log(`Selected via drag: ${selectedNavItem}`);
       }
       setIsDragging(false);
       setIsOpen(false);
-      setSelectedItem(null);
+      //   reset();
       return;
     }
 
     // Handle regular click (non-drag mode)
-    if (selectedItem !== null) {
-      console.log(`Navigating to: ${navItems[selectedItem].label}`);
+    if (selectedNavItem !== null) {
+      console.log(`Navigating to: ${selectedNavItem}`);
       setIsOpen(false);
     }
   };
@@ -79,13 +81,13 @@ const CircularNav = () => {
     setAngle(angle);
 
     if (angle >= 0 && angle < 22.5) {
-      setSelectedItem(0);
+      setSelectedNavItem(NavItem.Assets);
     } else if (angle >= 22.5 && angle < 67.5) {
-      setSelectedItem(1);
+      setSelectedNavItem(NavItem.AIChat);
     } else if (angle >= 67.5 && angle <= 90) {
-      setSelectedItem(2);
+      setSelectedNavItem(NavItem.History);
     } else {
-      setSelectedItem(null);
+      reset();
     }
   };
 
@@ -98,9 +100,9 @@ const CircularNav = () => {
     if (isDragging) {
       setIsDragging(false);
       setIsOpen(false);
-      setSelectedItem(null);
+      //   reset();
     } else {
-      setSelectedItem(null);
+      //   reset();
     }
   };
 
@@ -109,9 +111,9 @@ const CircularNav = () => {
       if (isDragging) {
         setIsDragging(false);
         setIsOpen(false);
-        setSelectedItem(null);
-        if (selectedItem !== null) {
-          console.log(`Selected via drag: ${navItems[selectedItem].label}`);
+        // reset();
+        if (selectedNavItem !== null) {
+          console.log(`Selected via drag: ${selectedNavItem}`);
         }
       }
     };
@@ -123,7 +125,7 @@ const CircularNav = () => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [isDragging, selectedItem]);
+  }, [isDragging, selectedNavItem]);
   const waveGroups = [
     {
       count: 1,
@@ -218,7 +220,7 @@ const CircularNav = () => {
                 <div
                   key={item.label}
                   className={`absolute left-1/2 top-1/2 transition-all duration-300 ${
-                    selectedItem === index ? "scale-125" : "scale-100"
+                    selectedNavItem === item.label ? "scale-125" : "scale-100"
                   }`}
                   style={{
                     transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
@@ -227,7 +229,7 @@ const CircularNav = () => {
                   <div
                     className={`p-4 rounded-full shadow-lg transition-all duration-300
                     ${
-                      selectedItem === index
+                      selectedNavItem === item.label
                         ? "bg-gradient-to-r from-blue-600 to-blue-400 text-white scale-110"
                         : "bg-white/10 text-blue-400 hover:bg-white/20"
                     }
@@ -236,12 +238,12 @@ const CircularNav = () => {
                     <Icon
                       size={20}
                       className={`transition-transform duration-300 ${
-                        selectedItem === index
+                        selectedNavItem === item.label
                           ? "scale-110"
                           : "group-hover:scale-110"
                       }`}
                     />
-                    {selectedItem === index && (
+                    {selectedNavItem === item.label && (
                       <>
                         <div className="absolute inset-0 rounded-full bg-blue-400/30 animate-pulse" />
                         <div className="absolute -inset-2 rounded-full border-2 border-blue-400/30 animate-ping" />
@@ -253,7 +255,7 @@ const CircularNav = () => {
                       className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 text-sm font-medium 
                       transition-all duration-300 whitespace-nowrap px-3 py-1 rounded-full
                       ${
-                        selectedItem === index
+                        selectedNavItem === item.label
                           ? "text-blue-300 bg-blue-900/70 backdrop-blur-sm border-blue-400/30"
                           : "text-blue-300/70"
                       }`}

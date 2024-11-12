@@ -33,6 +33,8 @@ import { parseEther } from "viem";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import CircularNav from "@/components/CircularNav";
+import { useStore, NavItem } from "@/store/store";
+import { TransactionHistory } from "@/components/TransactionHistory";
 // import { BrianCoinbaseSDK } from "@brian-ai/cdp-sdk";
 
 type Message = {
@@ -107,6 +109,8 @@ export default function Component() {
     useWaitForTransactionReceipt({
       hash,
     });
+
+  const { selectedNavItem } = useStore();
 
   const sendTx = async (message: string) => {
     try {
@@ -265,58 +269,66 @@ export default function Component() {
       {/* Top Bar */}
       <div className="flex items-center justify-end p-4 border-b border-zinc-800">
         <CircularNav />
-
         <ConnectButton />
       </div>
 
-      {/* Chat Area */}
-      <ScrollArea className="flex-1">
-        <div className="max-w-2xl mx-auto p-4">
-          <AnimatePresence initial={false}>
-            {messages.map((message) => (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className={cn(
-                  "mb-4 flex",
-                  message.sender === "user" ? "justify-end" : "justify-start"
-                )}
-              >
-                <div
+      <div className="flex flex-1">
+        {/* History Panel */}
+        {selectedNavItem === NavItem.History && (
+          <div className="w-80 border-r border-zinc-800">
+            <TransactionHistory />
+          </div>
+        )}
+
+        {/* Chat Area */}
+        <ScrollArea className="flex-1">
+          <div className="max-w-2xl mx-auto p-4">
+            <AnimatePresence initial={false}>
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
                   className={cn(
-                    "rounded-2xl px-4 py-2 max-w-[80%] shadow-lg",
-                    message.sender === "user"
-                      ? "bg-blue-600 bg-opacity-90 backdrop-blur-sm"
-                      : "bg-zinc-800 bg-opacity-90 backdrop-blur-sm"
+                    "mb-4 flex",
+                    message.sender === "user" ? "justify-end" : "justify-start"
                   )}
                 >
-                  {message.sender === "ai" ? (
-                    <ReactMarkdown
-                      className="text-sm font-mono"
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        // Remove empty paragraphs that only contain quotes
+                  <div
+                    className={cn(
+                      "rounded-2xl px-4 py-2 max-w-[80%] shadow-lg",
+                      message.sender === "user"
+                        ? "bg-blue-600 bg-opacity-90 backdrop-blur-sm"
+                        : "bg-zinc-800 bg-opacity-90 backdrop-blur-sm"
+                    )}
+                  >
+                    {message.sender === "ai" ? (
+                      <ReactMarkdown
+                        className="text-sm font-mono"
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          // Remove empty paragraphs that only contain quotes
 
-                        p: ({ children }) => {
-                          if (children && children.toString().trim() === '"')
-                            return null;
-                          return <p>{children}</p>;
-                        },
-                      }}
-                    >
-                      {message.text}
-                    </ReactMarkdown>
-                  ) : (
-                    <p className="text-sm font-mono">{message.text}</p>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      </ScrollArea>
+                          p: ({ children }) => {
+                            if (children && children.toString().trim() === '"')
+                              return null;
+                            return <p>{children}</p>;
+                          },
+                        }}
+                      >
+                        {message.text}
+                      </ReactMarkdown>
+                    ) : (
+                      <p className="text-sm font-mono">{message.text}</p>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </ScrollArea>
+      </div>
 
       {/* Input Area */}
       <div className="border-t border-zinc-800 p-4">
