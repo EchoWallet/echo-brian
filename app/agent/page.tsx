@@ -35,6 +35,7 @@ import remarkGfm from "remark-gfm";
 import CircularNav from "@/components/CircularNav";
 import { useStore, NavItem } from "@/store/store";
 import { TransactionHistory } from "@/components/TransactionHistory";
+import { TokenBalances } from "@/components/TokenBalances";
 // import { BrianCoinbaseSDK } from "@brian-ai/cdp-sdk";
 
 type Message = {
@@ -273,6 +274,13 @@ export default function Component() {
       </div>
 
       <div className="flex flex-1">
+        {/* Assets Panel */}
+        {selectedNavItem === NavItem.Assets && (
+          <div className="w-80 border-r border-zinc-800">
+            <TokenBalances />
+          </div>
+        )}
+
         {/* History Panel */}
         {selectedNavItem === NavItem.History && (
           <div className="w-80 border-r border-zinc-800">
