@@ -31,7 +31,9 @@ import {
 } from "wagmi";
 import { parseEther } from "viem";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from 'remark-gfm'; 
+import remarkGfm from "remark-gfm";
+import CircularNav from "@/components/CircularNav";
+// import { BrianCoinbaseSDK } from "@brian-ai/cdp-sdk";
 
 type Message = {
   id: number;
@@ -75,7 +77,6 @@ type Action =
 
 export default function Component() {
   const { address, chainId } = useAccount();
-
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -111,6 +112,24 @@ export default function Component() {
     try {
       const messageToSend = message;
       setInputMessage("");
+      // const sdk = new BrianCoinbaseSDK({
+      //   brianApiKey: process.env.NEXT_PUBLIC_BRIAN_API_KEY as string,
+      //   coinbaseApiKeyName: process.env
+      //     .NEXT_PUBLIC_COINBASE_API_KEY_NAME as string,
+      //   coinbaseApiKeySecret: process.env
+      //     .NEXT_PUBLIC_COINBASE_API_KEY_SECRET as string,
+      // });
+
+      // console.log(sdk, "sdk");
+
+      // // Create a wallet
+      // await sdk.createWallet({ networkId: "base-sepolia" });
+      // // Fund the wallet (only for Sepolia testnet)
+      // await sdk.fundWallet();
+
+      // // Execute a transaction based on a prompt
+      // const txHashes = await sdk.transact(messageToSend);
+      // console.log("Transaction hashes:", txHashes);
 
       const result = await brian.extract({
         prompt: messageToSend,
@@ -242,67 +261,12 @@ export default function Component() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-black text-white">
+    <div className="flex flex-col h-screen bg-black text-white relative">
       {/* Top Bar */}
-      <div className="flex items-center justify-between p-4 border-b border-zinc-800">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-800">
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Open menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent
-            side="left"
-            className="w-[300px] bg-zinc-900 border-zinc-800"
-          >
-            <SheetHeader>
-              <SheetTitle className="text-white">Details</SheetTitle>
-            </SheetHeader>
-            <div className="space-y-6 mt-6">
-              <div>
-                <h3 className="text-sm font-medium text-zinc-400 mb-2">
-                  Wallet Overview
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <p>Balance: 1000 ETH</p>
-                  <p>Assets: 5 NFTs</p>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-zinc-400 mb-2">
-                  Transaction History
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <p>Last tx: 0x1234...5678</p>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-zinc-400 mb-2">
-                  AI Activity Log
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <p>Last action: Message sent</p>
-                </div>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
+      <div className="flex items-center justify-end p-4 border-b border-zinc-800">
+        <CircularNav />
+
         <ConnectButton />
-        {/* <div className="flex gap-2"> */}
-        {/* <Button variant="ghost" size="icon" className="hover:bg-zinc-800"> */}
-        {/* <Wallet className="h-5 w-5" /> */}
-        {/* <span className="sr-only">Wallet</span> */}
-        {/* </Button> */}
-        {/* <Button variant="ghost" size="icon" className="hover:bg-zinc-800">
-            <Bell className="h-5 w-5" />
-            <span className="sr-only">Notifications</span>
-          </Button>
-          <Button variant="ghost" size="icon" className="hover:bg-zinc-800">
-            <Settings className="h-5 w-5" />
-            <span className="sr-only">Settings</span>
-          </Button> */}
-        {/* </div> */}
       </div>
 
       {/* Chat Area */}
@@ -329,15 +293,17 @@ export default function Component() {
                   )}
                 >
                   {message.sender === "ai" ? (
-                    <ReactMarkdown 
-                      className="text-sm font-mono" 
+                    <ReactMarkdown
+                      className="text-sm font-mono"
                       remarkPlugins={[remarkGfm]}
                       components={{
                         // Remove empty paragraphs that only contain quotes
-                        p: ({children}) => {
-                          if (children && children.toString().trim() === '"') return null;
+
+                        p: ({ children }) => {
+                          if (children && children.toString().trim() === '"')
+                            return null;
                           return <p>{children}</p>;
-                        }
+                        },
                       }}
                     >
                       {message.text}
