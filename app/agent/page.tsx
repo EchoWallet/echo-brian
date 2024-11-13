@@ -20,22 +20,22 @@ import {
   PaperclipIcon,
   Mic,
   Send,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { brian } from "@/lib/brain";
-import {
-  useAccount,
-  useSendTransaction,
-  useWaitForTransactionReceipt,
-} from "wagmi";
-import { parseEther } from "viem";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import CircularNav from "@/components/CircularNav";
 import { useStore, NavItem } from "@/store/store";
 import { TransactionHistory } from "@/components/TransactionHistory";
 import { TokenBalances } from "@/components/TokenBalances";
+import {
+  useAccount,
+  useSendTransaction,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { brian } from "@/lib/brain";
 // import { BrianCoinbaseSDK } from "@brian-ai/cdp-sdk";
 
 type Message = {
@@ -266,125 +266,295 @@ export default function Component() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-black text-white relative">
-      {/* Top Bar */}
-      <div className="flex items-center justify-end p-4 border-b border-zinc-800">
-        <CircularNav />
-        <ConnectButton />
+    <div className="flex flex-col h-screen relative overflow-hidden">
+      {/* Background Layers */}
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-[#0A0F1A] to-black" />
+
+      {/* Ambient Light Effects */}
+      <div className="fixed inset-0">
+        <div
+          className="absolute -top-[40%] left-1/2 -translate-x-1/2 w-[120%] h-[60%] 
+          bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] 
+          from-blue-900/[0.03] via-transparent to-transparent 
+          blur-3xl"
+        />
+        <div
+          className="absolute -bottom-[20%] left-1/2 -translate-x-1/2 w-[120%] h-[50%] 
+          bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] 
+          from-indigo-900/[0.02] via-transparent to-transparent 
+          blur-3xl"
+        />
       </div>
 
-      <div className="flex flex-1">
-        {/* Assets Panel */}
-        {selectedNavItem === NavItem.Assets && (
-          <div className="w-80 border-r border-zinc-800">
-            <TokenBalances />
-          </div>
-        )}
+      {/* Noise Texture */}
+      <div className="fixed inset-0 bg-[url('/noise.png')] opacity-[0.015]" />
 
-        {/* History Panel */}
-        {selectedNavItem === NavItem.History && (
-          <div className="w-80 border-r border-zinc-800">
-            <TransactionHistory />
+      {/* Main Content Container */}
+      <div className="relative flex flex-col h-full">
+        {/* Top Navigation Bar */}
+        <div className="flex items-center justify-between p-4 border-b border-white/[0.02] bg-white/[0.01] backdrop-blur-sm supports-[backdrop-filter]:bg-white/[0.01]">
+          <div className="flex items-center gap-4">
+            <CircularNav />
           </div>
-        )}
+          <ConnectButton />
+        </div>
 
-        {/* Chat Area */}
-        <ScrollArea className="flex-1">
-          <div className="max-w-2xl mx-auto p-4">
-            <AnimatePresence initial={false}>
-              {messages.map((message) => (
+        {/* Main Content Area */}
+        <div className="flex flex-1 relative">
+          {/* Animated Side Panels */}
+          <AnimatePresence mode="wait">
+            {/* Assets Panel */}
+            {selectedNavItem === NavItem.Assets && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{
+                  width: 320,
+                  opacity: 1,
+                }}
+                exit={{
+                  width: 0,
+                  opacity: 0,
+                }}
+                transition={{
+                  type: "spring",
+                  bounce: 0.2,
+                  duration: 0.6,
+                }}
+                className="border-r border-white/[0.02] bg-white/[0.01] backdrop-blur-sm overflow-hidden"
+              >
+                <div className="w-80">
+                  <TokenBalances />
+                </div>
+              </motion.div>
+            )}
+
+            {/* History Panel */}
+            {selectedNavItem === NavItem.History && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{
+                  width: 320,
+                  opacity: 1,
+                }}
+                exit={{
+                  width: 0,
+                  opacity: 0,
+                }}
+                transition={{
+                  type: "spring",
+                  bounce: 0.2,
+                  duration: 0.6,
+                }}
+                className="border-r border-white/[0.02] bg-white/[0.01] backdrop-blur-sm overflow-hidden"
+              >
+                <div className="w-80">
+                  <TransactionHistory />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Chat Container */}
+          <motion.div
+            className="flex-1 flex flex-col relative"
+            layout
+            transition={{
+              layout: { type: "spring", bounce: 0.2, duration: 0.6 },
+            }}
+          >
+            {/* Side Panel Opening Effect */}
+            <AnimatePresence>
+              {selectedNavItem && (
                 <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className={cn(
-                    "mb-4 flex",
-                    message.sender === "user" ? "justify-end" : "justify-start"
-                  )}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 pointer-events-none"
                 >
-                  <div
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/[0.02] to-transparent" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Chat Messages Area */}
+            <ScrollArea className="flex-1">
+              <motion.div
+                className="max-w-3xl mx-auto p-6"
+                layout="position"
+                transition={{
+                  layout: { type: "spring", bounce: 0.2, duration: 0.6 },
+                }}
+              >
+                <AnimatePresence initial={false}>
+                  {messages.map((message, index) => (
+                    <motion.div
+                      key={message.id}
+                      initial={{
+                        opacity: 0,
+                        y: 20,
+                        x: message.sender === "user" ? 20 : -20,
+                        scale: 0.95,
+                      }}
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                        x: 0,
+                        scale: 1,
+                      }}
+                      transition={{
+                        duration: 0.4,
+                        delay: index * 0.05,
+                        type: "spring",
+                        bounce: 0.3,
+                      }}
+                      layout="position"
+                      className={cn(
+                        "mb-6 flex",
+                        message.sender === "user"
+                          ? "justify-end"
+                          : "justify-start"
+                      )}
+                    >
+                      <motion.div
+                        whileHover={{ scale: 1.01 }}
+                        className={cn(
+                          "rounded-2xl px-6 py-3 max-w-[80%] shadow-lg relative group",
+                          message.sender === "user"
+                            ? "bg-gradient-to-r from-blue-500/40 to-blue-600/40 border border-blue-400/10"
+                            : "bg-white/[0.03] border border-white/[0.02]",
+                          "backdrop-blur-md"
+                        )}
+                      >
+                        {/* Message Hover Effect */}
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/[0.05] to-blue-500/0 rounded-2xl"
+                          initial={{ opacity: 0 }}
+                          whileHover={{ opacity: 1 }}
+                          transition={{ duration: 0.3 }}
+                        />
+
+                        {/* Message Content */}
+                        {message.sender === "ai" ? (
+                          <ReactMarkdown
+                            className="text-sm font-mono leading-relaxed relative z-10"
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              p: ({ children }) => {
+                                if (
+                                  children &&
+                                  children.toString().trim() === '"'
+                                )
+                                  return null;
+                                return (
+                                  <p className="text-zinc-300">{children}</p>
+                                );
+                              },
+                              code: ({ children }) => (
+                                <code className="bg-black/20 rounded px-1 py-0.5 text-blue-200">
+                                  {children}
+                                </code>
+                              ),
+                            }}
+                          >
+                            {message.text}
+                          </ReactMarkdown>
+                        ) : (
+                          <p className="text-sm font-mono text-white/90 relative z-10">
+                            {message.text}
+                          </p>
+                        )}
+                      </motion.div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </ScrollArea>
+
+            {/* Input Area */}
+            <motion.div
+              className="border-t border-white/[0.02] bg-white/[0.01] backdrop-blur-sm p-4"
+              layout="position"
+              transition={{
+                layout: { type: "spring", bounce: 0.2, duration: 0.6 },
+              }}
+            >
+              <div className="max-w-3xl mx-auto">
+                <div className="flex items-center gap-2 bg-white/[0.02] rounded-2xl p-2 backdrop-blur-sm border border-white/[0.02]">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hover:bg-white/5 rounded-xl transition-colors"
+                  >
+                    <PaperclipIcon className="h-5 w-5 text-zinc-400" />
+                  </Button>
+                  <Input
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder="Send a message..."
+                    className="flex-1 bg-transparent border-0 focus-visible:ring-0 text-white placeholder:text-zinc-500"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hover:bg-white/5 rounded-xl transition-colors"
+                  >
+                    <Mic className="h-5 w-5 text-zinc-400" />
+                  </Button>
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={isPending}
                     className={cn(
-                      "rounded-2xl px-4 py-2 max-w-[80%] shadow-lg",
-                      message.sender === "user"
-                        ? "bg-blue-600 bg-opacity-90 backdrop-blur-sm"
-                        : "bg-zinc-800 bg-opacity-90 backdrop-blur-sm"
+                      "bg-blue-500/40 hover:bg-blue-500/50",
+                      "rounded-xl px-4 py-2 font-medium transition-all duration-200",
+                      "border border-blue-400/10",
+                      "disabled:opacity-50 disabled:cursor-not-allowed"
                     )}
                   >
-                    {message.sender === "ai" ? (
-                      <ReactMarkdown
-                        className="text-sm font-mono"
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          // Remove empty paragraphs that only contain quotes
-
-                          p: ({ children }) => {
-                            if (children && children.toString().trim() === '"')
-                              return null;
-                            return <p>{children}</p>;
-                          },
-                        }}
-                      >
-                        {message.text}
-                      </ReactMarkdown>
+                    {isPending ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <p className="text-sm font-mono">{message.text}</p>
+                      <Send className="h-5 w-5" />
                     )}
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        </ScrollArea>
-      </div>
+                  </Button>
+                </div>
 
-      {/* Input Area */}
-      <div className="border-t border-zinc-800 p-4">
-        <div className="max-w-md mx-auto flex items-center bg-zinc-800 rounded-full overflow-hidden">
-          <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-            <PaperclipIcon className="h-5 w-5" />
-            <span className="sr-only">Attach file</span>
-          </Button>
-          <Input
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={async (e) => {
-              if (e.key === "Enter") {
-                await handleSendMessage();
-              }
-            }}
-            placeholder="Send a message..."
-            className="flex-1 bg-transparent border-0 focus-visible:ring-0 text-white placeholder:text-zinc-400"
-          />
-          <Button variant="ghost" size="icon" className="hover:bg-zinc-700">
-            <Mic className="h-5 w-5" />
-            <span className="sr-only">Voice input</span>
-          </Button>
-          <Button
-            onClick={handleSendMessage}
-            disabled={isPending}
-            size="icon"
-            className="bg-blue-600 hover:bg-blue-700 rounded-full"
-          >
-            {isPending ? "Confirming..." : <Send className="h-5 w-5" />}
-            <span className="sr-only">Send message</span>
-          </Button>
+                {/* Status Messages */}
+                <AnimatePresence>
+                  {(error || isConfirming || isConfirmed) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="mt-3 text-sm"
+                    >
+                      {error && (
+                        <div className="text-red-300 bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-2 backdrop-blur-sm">
+                          Error: {(error as any).shortMessage || error.message}
+                        </div>
+                      )}
+                      {isConfirming && (
+                        <div className="text-blue-300 bg-blue-500/5 border border-blue-500/10 rounded-lg px-4 py-2 backdrop-blur-sm flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Waiting for confirmation...
+                        </div>
+                      )}
+                      {isConfirmed && (
+                        <div className="text-emerald-300 bg-emerald-500/5 border border-emerald-500/10 rounded-lg px-4 py-2 backdrop-blur-sm">
+                          Transaction confirmed! ✨
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
-        {error && (
-          <div className="text-red-500 text-sm mt-2">
-            Error: {(error as any).shortMessage || error.message}
-          </div>
-        )}
-        {isConfirming && (
-          <div className="text-zinc-400 text-sm mt-2">
-            Waiting for confirmation...
-          </div>
-        )}
-        {isConfirmed && (
-          <div className="text-green-500 text-sm mt-2">
-            Transaction confirmed!
-          </div>
-        )}
       </div>
     </div>
   );

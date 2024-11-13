@@ -14,7 +14,6 @@ const CircularNav = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [angle, setAngle] = useState(0);
-  //   const [selectedItem, setSelectedItem] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -34,52 +33,26 @@ const CircularNav = () => {
     };
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
-    timeoutRef.current = setTimeout(() => {
-      setIsOpen(true);
-      setIsDragging(true);
-    }, 500);
-  };
+  const handleMouseMove = (e: React.MouseEvent | MouseEvent) => {
+    if (!isDragging) return;
 
-  const handleMouseUp = (e: React.MouseEvent) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    const viewportX = "clientX" in e ? e.clientX : (e as MouseEvent).clientX;
+    const viewportY = "clientY" in e ? e.clientY : (e as MouseEvent).clientY;
 
-    // If we were in long-press mode (isDragging), handle the selection and close
-    if (isDragging) {
-      if (selectedNavItem !== null) {
-        console.log(`Selected via drag: ${selectedNavItem}`);
-      }
-      setIsDragging(false);
-      setIsOpen(false);
-      //   reset();
-      return;
-    }
+    const menuRect = containerRef.current?.getBoundingClientRect();
+    if (!menuRect) return;
 
-    // Handle regular click (non-drag mode)
-    if (selectedNavItem !== null) {
-      console.log(`Navigating to: ${selectedNavItem}`);
-      setIsOpen(false);
-    }
-  };
+    const centerX = menuRect.left + menuRect.width / 2;
+    const centerY = menuRect.top + menuRect.height / 2;
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !containerRef.current) return;
-
-    const container = containerRef.current;
-    const rect = container.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-
-    const deltaX = e.clientX - centerX;
-    const deltaY = e.clientY - centerY;
+    const deltaX = viewportX - centerX;
+    const deltaY = viewportY - centerY;
 
     let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
     if (angle < 0) angle += 360;
     setAngle(angle);
 
+    // Update selected item based on angle
     if (angle >= 0 && angle < 22.5) {
       setSelectedNavItem(NavItem.Assets);
     } else if (angle >= 22.5 && angle < 67.5) {
@@ -91,41 +64,68 @@ const CircularNav = () => {
     }
   };
 
-  const handleMouseLeave = () => {
+  const handleMouseDown = (e: React.MouseEvent) => {
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    timeoutRef.current = setTimeout(() => {
+      setIsOpen(true);
+      setIsDragging(true);
+    }, 500);
+  };
+
+  const handleMouseUp = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
-    // If we're in drag mode and mouse leaves, close the menu
     if (isDragging) {
       setIsDragging(false);
+      if (selectedNavItem !== null) {
+        setIsOpen(false);
+      }
+    } else if (selectedNavItem !== null) {
       setIsOpen(false);
-      //   reset();
-    } else {
-      //   reset();
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    if (!isDragging) {
+      reset();
     }
   };
 
   useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        handleMouseMove(e);
+      }
+    };
+
     const handleGlobalMouseUp = () => {
       if (isDragging) {
         setIsDragging(false);
-        setIsOpen(false);
-        // reset();
         if (selectedNavItem !== null) {
-          console.log(`Selected via drag: ${selectedNavItem}`);
+          setIsOpen(false);
         }
       }
     };
 
-    window.addEventListener("mouseup", handleGlobalMouseUp);
+    if (isDragging) {
+      window.addEventListener("mousemove", handleGlobalMouseMove);
+      window.addEventListener("mouseup", handleGlobalMouseUp);
+    }
+
     return () => {
+      window.removeEventListener("mousemove", handleGlobalMouseMove);
       window.removeEventListener("mouseup", handleGlobalMouseUp);
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [isDragging, selectedNavItem]);
+  }, [isDragging, selectedNavItem, reset]);
+
   const waveGroups = [
     {
       count: 1,
@@ -191,7 +191,6 @@ const CircularNav = () => {
         className="relative w-40 h-40 flex items-center justify-center touch-none"
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
         {/* Enhanced Central Button */}
