@@ -11,6 +11,7 @@
   "dependencies": {
     "@brian-ai/cdp-sdk": "^1.0.6",
     "@brian-ai/sdk": "^0.3.1",
+    "@covalenthq/client-sdk": "^2.2.1",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-scroll-area": "^1.2.0",
     "@radix-ui/react-slot": "^1.1.0",

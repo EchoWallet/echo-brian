@@ -20,7 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useStore } from "@/store/store";
-import { GoldRushClient, Chains } from "@covalenthq/client-sdk";
+import { GoldRushClient, Chain, ChainName } from "@covalenthq/client-sdk";
 
 interface TokenBalance {
   contractAddress: string;
@@ -28,6 +28,9 @@ interface TokenBalance {
   symbol: string;
   decimals: number;
   name: string;
+  quoteRate?: number | null;
+  quote?: number | null;
+  logoUrl?: string | null;
 }
 
 interface TokenBalanceResponse {
@@ -156,6 +159,17 @@ const NETWORK_TOKENS: Record<
   ],
 };
 
+const CHAINID_TO_CHAINNAME: Record<number, ChainName> = {
+  1: ChainName.ETH_MAINNET,
+  11155111: ChainName.ETH_SEPOLIA,
+  137: ChainName.MATIC_MAINNET,
+  80002: ChainName.POLYGON_AMOY_TESTNET,
+  8453: ChainName.BASE_MAINNET,
+  84532: ChainName.BASE_SEPOLIA_TESTNET,
+  167000: ChainName.TAIKO_MAINNET,
+  167009: ChainName.TAIKO_HEKLA_TESTNET,
+};
+
 // Comment out or remove dummy data
 // const DUMMY_BALANCES: Record<string, string> = { ... }
 // const TOKEN_PRICES: Record<string, number> = { ... }
@@ -176,67 +190,41 @@ export function TokenBalances() {
 
       try {
         setIsLoading(true);
-
-        // Fetch native balance first
-        const nativeBalanceResponse = await fetchNativeBalance(
-          address,
-          chainId
+        const client = new GoldRushClient(
+          process.env.NEXT_PUBLIC_GOLDRUSH_API_KEY!
         );
 
-        // Create native token balance object
-        const nativeToken: TokenBalance = {
-          contractAddress: "0x0000000000000000000000000000000000000000", // ETH/Native token address
-          balance:
-            nativeBalanceResponse.status === "1"
-              ? nativeBalanceResponse.result
-              : "0",
-          symbol: chainId === 1 ? "ETH" : chainId === 167009 ? "ETH" : "TKO",
-          decimals: 18,
-          name:
-            chainId === 1
-              ? "Ethereum"
-              : chainId === 167009
-              ? "Ethereum"
-              : "Taiko",
-        };
+        const balanceResp =
+          await client.BalanceService.getTokenBalancesForWalletAddress(
+            CHAINID_TO_CHAINNAME[chainId],
+            address
+          );
 
-        // Fetch other token balances
-        const tokens = NETWORK_TOKENS[chainId] || [];
-        const balancePromises = tokens.map((token) =>
-          fetchTokenBalance(address, token.address, chainId)
-        );
+        if (balanceResp.error) {
+          throw balanceResp.error_message;
+        }
 
-        const balanceResponses = await Promise.allSettled(balancePromises);
+        const tokenBalances: TokenBalance[] = (balanceResp.data?.items ?? [])
+          .filter((item) => item.balance && BigInt(item.balance) > BigInt(0))
+          .filter(
+            (item) =>
+              item.contract_address &&
+              item.contract_ticker_symbol &&
+              item.contract_decimals &&
+              item.contract_name
+          )
+          .map((item) => ({
+            contractAddress: item.contract_address!,
+            balance: item.balance!.toString(),
+            symbol: item.contract_ticker_symbol!,
+            decimals: item.contract_decimals!,
+            name: item.contract_name!,
+            quoteRate: item.quote_rate,
+            quote: item.quote,
+            logoUrl: item.logo_url,
+          }));
 
-        const tokenBalances = balanceResponses.map((response, index) => {
-          const token = tokens[index];
-          let balance = "0";
-
-          if (
-            response.status === "fulfilled" &&
-            response.value.status === "1"
-          ) {
-            balance = response.value.result;
-          }
-
-          return {
-            contractAddress: token.address,
-            balance,
-            symbol: token.symbol,
-            decimals: token.decimals,
-            name: token.name,
-          };
-        });
-
-        // Combine native token with other tokens
-        const allBalances = [nativeToken, ...tokenBalances];
-
-        // Filter out zero balances
-        const nonZeroBalances = allBalances.filter(
-          (token) => BigInt(token.balance) > BigInt(0)
-        );
-
-        setTokenBalances(nonZeroBalances);
+        setTokenBalances(tokenBalances);
       } catch (error) {
         console.error("Failed to fetch balances:", error);
       } finally {
@@ -273,14 +261,10 @@ export function TokenBalances() {
     ApiServices();
   }, []);
 
-  // Temporarily use a simple value calculation without prices
+  // Update calculateTotalValue to use quote values
   const calculateTotalValue = (balances: TokenBalance[]): number => {
     return balances.reduce((total, token) => {
-      const balance = Number(
-        formatUnits(BigInt(token.balance), token.decimals)
-      );
-      // For now, just use the balance as the value
-      return total + balance;
+      return total + (token.quote || 0);
     }, 0);
   };
 
@@ -452,8 +436,9 @@ export function TokenBalances() {
                   const balance = Number(
                     formatUnits(BigInt(token.balance), token.decimals)
                   );
-                  const percentage =
-                    (balance / calculateTotalValue(tokenBalances)) * 100;
+                  const percentage = token.quote
+                    ? (token.quote / calculateTotalValue(tokenBalances)) * 100
+                    : 0;
 
                   return (
                     <motion.div
@@ -496,6 +481,13 @@ export function TokenBalances() {
                                 maximumFractionDigits: 4,
                               })}{" "}
                               {token.symbol}
+                            </div>
+                            <div className="text-sm text-zinc-400">
+                              $
+                              {token.quote?.toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              }) || "0.00"}
                             </div>
                           </div>
                         </div>
