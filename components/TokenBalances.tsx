@@ -313,6 +313,13 @@ export function TokenBalances() {
     return (
       <div className="p-8 text-center space-y-4 bg-black/20 backdrop-blur-lg rounded-xl border border-zinc-800/50">
         <AlertCircle className="w-12 h-12 text-zinc-400 mx-auto" />
+
+        <button
+          onClick={reset}
+          className="absolute top-0 right-3 p-1.5 rounded-full bg-white/[0.02] border border-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.05] transition-all duration-200 group"
+        >
+          <X className="h-4 w-4 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
+        </button>
         <div>
           <h3 className="text-lg font-medium text-zinc-200">
             Wallet Not Connected
