@@ -14,6 +14,9 @@ const CircularNav = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [angle, setAngle] = useState(0);
+  const [tempSelectedItem, setTempSelectedItem] = useState<NavItem | null>(
+    null
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -52,15 +55,15 @@ const CircularNav = () => {
     if (angle < 0) angle += 360;
     setAngle(angle);
 
-    // Update selected item based on angle
+    // Update temporary selected item based on angle
     if (angle >= 0 && angle < 22.5) {
-      setSelectedNavItem(NavItem.Assets);
+      setTempSelectedItem(NavItem.Assets);
     } else if (angle >= 22.5 && angle < 67.5) {
-      setSelectedNavItem(NavItem.AIChat);
+      setTempSelectedItem(NavItem.AIChat);
     } else if (angle >= 67.5 && angle <= 90) {
-      setSelectedNavItem(NavItem.History);
+      setTempSelectedItem(NavItem.History);
     } else {
-      reset();
+      setTempSelectedItem(null);
     }
   };
 
@@ -79,7 +82,8 @@ const CircularNav = () => {
 
     if (isDragging) {
       setIsDragging(false);
-      if (selectedNavItem !== null) {
+      if (tempSelectedItem !== null) {
+        setSelectedNavItem(tempSelectedItem); // Update actual selection on mouse up
         setIsOpen(false);
       }
     } else if (selectedNavItem !== null) {
@@ -106,7 +110,8 @@ const CircularNav = () => {
     const handleGlobalMouseUp = () => {
       if (isDragging) {
         setIsDragging(false);
-        if (selectedNavItem !== null) {
+        if (tempSelectedItem !== null) {
+          setSelectedNavItem(tempSelectedItem); // Update actual selection on global mouse up
           setIsOpen(false);
         }
       }
@@ -124,7 +129,7 @@ const CircularNav = () => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [isDragging, selectedNavItem, reset]);
+  }, [isDragging, tempSelectedItem, setSelectedNavItem]);
 
   const waveGroups = [
     {
@@ -219,7 +224,7 @@ const CircularNav = () => {
                 <div
                   key={item.label}
                   className={`absolute left-1/2 top-1/2 transition-all duration-300 ${
-                    selectedNavItem === item.label ? "scale-125" : "scale-100"
+                    tempSelectedItem === item.label ? "scale-125" : "scale-100"
                   }`}
                   style={{
                     transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
@@ -228,7 +233,7 @@ const CircularNav = () => {
                   <div
                     className={`p-4 rounded-full shadow-lg transition-all duration-300
                     ${
-                      selectedNavItem === item.label
+                      tempSelectedItem === item.label
                         ? "bg-gradient-to-r from-blue-600 to-blue-400 text-white scale-110"
                         : "bg-white/10 text-blue-400 hover:bg-white/20"
                     }
@@ -237,12 +242,12 @@ const CircularNav = () => {
                     <Icon
                       size={20}
                       className={`transition-transform duration-300 ${
-                        selectedNavItem === item.label
+                        tempSelectedItem === item.label
                           ? "scale-110"
                           : "group-hover:scale-110"
                       }`}
                     />
-                    {selectedNavItem === item.label && (
+                    {tempSelectedItem === item.label && (
                       <>
                         <div className="absolute inset-0 rounded-full bg-blue-400/30 animate-pulse" />
                         <div className="absolute -inset-2 rounded-full border-2 border-blue-400/30 animate-ping" />
@@ -254,7 +259,7 @@ const CircularNav = () => {
                       className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 text-sm font-medium 
                       transition-all duration-300 whitespace-nowrap px-3 py-1 rounded-full
                       ${
-                        selectedNavItem === item.label
+                        tempSelectedItem === item.label
                           ? "text-blue-300 bg-blue-900/70 backdrop-blur-sm border-blue-400/30"
                           : "text-blue-300/70"
                       }`}
