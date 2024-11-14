@@ -193,6 +193,7 @@ export default function Component() {
         return;
       }
 
+      console.log(result, "result", address, chainId);
       const transactionResult = await brian.transact({
         ...result,
         address: address!,
@@ -274,15 +275,15 @@ export default function Component() {
       <div className="fixed inset-0">
         <div
           className="absolute -top-[40%] left-1/2 -translate-x-1/2 w-[120%] h-[60%] 
-          bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] 
-          from-blue-900/[0.03] via-transparent to-transparent 
-          blur-3xl"
+        bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] 
+        from-blue-900/[0.03] via-transparent to-transparent 
+        blur-3xl"
         />
         <div
           className="absolute -bottom-[20%] left-1/2 -translate-x-1/2 w-[120%] h-[50%] 
-          bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] 
-          from-indigo-900/[0.02] via-transparent to-transparent 
-          blur-3xl"
+        bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] 
+        from-indigo-900/[0.02] via-transparent to-transparent 
+        blur-3xl"
         />
       </div>
 
@@ -292,7 +293,7 @@ export default function Component() {
       {/* Main Content Container */}
       <div className="relative flex flex-col h-full">
         {/* Top Navigation Bar */}
-        <div className="flex items-center justify-between p-4 border-b border-white/[0.02] bg-white/[0.01] backdrop-blur-sm supports-[backdrop-filter]:bg-white/[0.01]">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-white/[0.02] bg-white/[0.01] backdrop-blur-sm">
           <div className="flex items-center gap-4">
             <CircularNav />
           </div>
@@ -300,27 +301,17 @@ export default function Component() {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex flex-1 relative">
+        <div className="relative flex flex-1 h-[calc(100vh-4rem)]">
           {/* Animated Side Panels */}
           <AnimatePresence mode="wait">
             {/* Assets Panel */}
             {selectedNavItem === NavItem.Assets && (
               <motion.div
                 initial={{ width: 0, opacity: 0 }}
-                animate={{
-                  width: 320,
-                  opacity: 1,
-                }}
-                exit={{
-                  width: 0,
-                  opacity: 0,
-                }}
-                transition={{
-                  type: "spring",
-                  bounce: 0.2,
-                  duration: 0.6,
-                }}
-                className="border-r border-white/[0.02] bg-white/[0.01] backdrop-blur-sm overflow-hidden"
+                animate={{ width: 320, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                className="h-full border-r border-white/[0.02] bg-white/[0.01] backdrop-blur-sm overflow-hidden"
               >
                 <div className="w-80">
                   <TokenBalances />
@@ -332,20 +323,10 @@ export default function Component() {
             {selectedNavItem === NavItem.History && (
               <motion.div
                 initial={{ width: 0, opacity: 0 }}
-                animate={{
-                  width: 320,
-                  opacity: 1,
-                }}
-                exit={{
-                  width: 0,
-                  opacity: 0,
-                }}
-                transition={{
-                  type: "spring",
-                  bounce: 0.2,
-                  duration: 0.6,
-                }}
-                className="border-r border-white/[0.02] bg-white/[0.01] backdrop-blur-sm overflow-hidden"
+                animate={{ width: 320, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                className="h-full border-r border-white/[0.02] bg-white/[0.01] backdrop-blur-sm overflow-hidden"
               >
                 <div className="w-80">
                   <TransactionHistory />
@@ -354,37 +335,13 @@ export default function Component() {
             )}
           </AnimatePresence>
 
-          {/* Chat Container */}
-          <motion.div
-            className="flex-1 flex flex-col relative"
-            layout
-            transition={{
-              layout: { type: "spring", bounce: 0.2, duration: 0.6 },
-            }}
-          >
-            {/* Side Panel Opening Effect */}
-            <AnimatePresence>
-              {selectedNavItem && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 pointer-events-none"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/[0.02] to-transparent" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Chat Messages Area */}
-            <ScrollArea className="flex-1">
-              <motion.div
-                className="max-w-3xl mx-auto p-6"
-                layout="position"
-                transition={{
-                  layout: { type: "spring", bounce: 0.2, duration: 0.6 },
-                }}
-              >
+          {/* Chat Area Container */}
+          <div className="relative flex-1 h-full">
+            {/* Messages Area */}
+            <ScrollArea className="h-[calc(100vh-10rem)]">
+              {" "}
+              {/* Adjusted height for header + input */}
+              <div className="max-w-3xl mx-auto p-6">
                 <AnimatePresence initial={false}>
                   {messages.map((message, index) => (
                     <motion.div
@@ -395,12 +352,7 @@ export default function Component() {
                         x: message.sender === "user" ? 20 : -20,
                         scale: 0.95,
                       }}
-                      animate={{
-                        opacity: 1,
-                        y: 0,
-                        x: 0,
-                        scale: 1,
-                      }}
+                      animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
                       transition={{
                         duration: 0.4,
                         delay: index * 0.05,
@@ -425,15 +377,12 @@ export default function Component() {
                           "backdrop-blur-md"
                         )}
                       >
-                        {/* Message Hover Effect */}
                         <motion.div
                           className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/[0.05] to-blue-500/0 rounded-2xl"
                           initial={{ opacity: 0 }}
                           whileHover={{ opacity: 1 }}
                           transition={{ duration: 0.3 }}
                         />
-
-                        {/* Message Content */}
                         {message.sender === "ai" ? (
                           <ReactMarkdown
                             className="text-sm font-mono leading-relaxed relative z-10"
@@ -467,18 +416,12 @@ export default function Component() {
                     </motion.div>
                   ))}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             </ScrollArea>
 
-            {/* Input Area */}
-            <motion.div
-              className="border-t border-white/[0.02] bg-white/[0.01] backdrop-blur-sm p-4"
-              layout="position"
-              transition={{
-                layout: { type: "spring", bounce: 0.2, duration: 0.6 },
-              }}
-            >
-              <div className="max-w-3xl mx-auto">
+            {/* Fixed Input Area */}
+            <div className="absolute bottom-0 left-0 right-0 bg-white/[0.01] backdrop-blur-sm border-t border-white/[0.02]">
+              <div className="max-w-3xl mx-auto p-4">
                 <div className="flex items-center gap-2 bg-white/[0.02] rounded-2xl p-2 backdrop-blur-sm border border-white/[0.02]">
                   <Button
                     variant="ghost"
@@ -530,7 +473,7 @@ export default function Component() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className="mt-3 text-sm"
+                      className="absolute -top-16 left-0 right-0 px-4"
                     >
                       {error && (
                         <div className="text-red-300 bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-2 backdrop-blur-sm">
@@ -552,8 +495,8 @@ export default function Component() {
                   )}
                 </AnimatePresence>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
