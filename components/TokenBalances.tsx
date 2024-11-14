@@ -159,7 +159,7 @@ const NETWORK_TOKENS: Record<
   ],
 };
 
-const CHAINID_TO_CHAINNAME: Record<number, ChainName> = {
+export const CHAINID_TO_CHAINNAME: Record<number, ChainName> = {
   1: ChainName.ETH_MAINNET,
   11155111: ChainName.ETH_SEPOLIA,
   137: ChainName.MATIC_MAINNET,
@@ -279,12 +279,24 @@ export function TokenBalances() {
     });
 
     return filtered.sort((a, b) => {
+      // First, separate 0% tokens
+      const percentageA =
+        ((a.quote || 0) / calculateTotalValue(tokenBalances)) * 100;
+      const percentageB =
+        ((b.quote || 0) / calculateTotalValue(tokenBalances)) * 100;
+
+      if (percentageA === 0 && percentageB !== 0) return 1;
+      if (percentageA !== 0 && percentageB === 0) return -1;
+
+      // Then apply the regular sorting
       const balanceA = Number(formatUnits(BigInt(a.balance), a.decimals));
       const balanceB = Number(formatUnits(BigInt(b.balance), b.decimals));
 
       let comparison = 0;
       switch (sortBy) {
         case "value":
+          comparison = (a.quote || 0) - (b.quote || 0);
+          break;
         case "balance":
           comparison = balanceA - balanceB;
           break;
