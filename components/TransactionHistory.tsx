@@ -25,6 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CHAINID_TO_CHAINNAME } from "./TokenBalances";
 
 interface Transaction {
   hash: string;
@@ -34,6 +35,7 @@ interface Transaction {
   timeStamp: string;
   isError: string;
   functionName: string;
+  type: "sent" | "received";
 }
 
 interface TaikoApiResponse {
@@ -94,6 +96,7 @@ const DUMMY_TRANSACTIONS: Transaction[] = [
     timeStamp: (Date.now() / 1000 - 3600).toString(), // 1 hour ago
     isError: "0",
     functionName: "transfer",
+    type: "sent",
   },
   {
     hash: "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
@@ -103,6 +106,7 @@ const DUMMY_TRANSACTIONS: Transaction[] = [
     timeStamp: (Date.now() / 1000 - 7200).toString(), // 2 hours ago
     isError: "0",
     functionName: "swap",
+    type: "received",
   },
   {
     hash: "0x9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba",
@@ -112,6 +116,7 @@ const DUMMY_TRANSACTIONS: Transaction[] = [
     timeStamp: (Date.now() / 1000 - 86400).toString(), // 1 day ago
     isError: "1", // Failed transaction
     functionName: "approve",
+    type: "sent",
   },
   {
     hash: "0xfedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
@@ -121,6 +126,7 @@ const DUMMY_TRANSACTIONS: Transaction[] = [
     timeStamp: (Date.now() / 1000 - 172800).toString(), // 2 days ago
     isError: "0",
     functionName: "bridge",
+    type: "received",
   },
   {
     hash: "0x5432109876fedcba5432109876fedcba5432109876fedcba5432109876fedcba",
@@ -130,6 +136,7 @@ const DUMMY_TRANSACTIONS: Transaction[] = [
     timeStamp: (Date.now() / 1000 - 259200).toString(), // 3 days ago
     isError: "0",
     functionName: "stake",
+    type: "sent",
   },
 ];
 
@@ -144,15 +151,58 @@ export function TransactionHistory() {
   const ITEMS_PER_PAGE = 3;
 
   useEffect(() => {
-    // Simulate API call with delay
     const fetchTransactions = async () => {
       if (!address) return;
 
       try {
         setIsLoading(true);
-        // Simulate network delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setTransactions(DUMMY_TRANSACTIONS);
+
+        const options = {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_GOLDRUSH_API_KEY}`,
+          },
+        };
+
+        const response = await fetch(
+          `https://api.covalenthq.com/v1/${
+            CHAINID_TO_CHAINNAME[chainId!]
+          }/address/${address}/transactions_v3/`,
+          options
+        );
+
+        const data = await response.json();
+
+        const transactions = (data.data?.items || [])
+          // Filter transactions where address is either sender or receiver
+          .filter(
+            (tx: any) =>
+              tx.from_address?.toLowerCase() === address.toLowerCase() ||
+              tx.to_address?.toLowerCase() === address.toLowerCase()
+          )
+          .map((tx: any) => {
+            const relevantLog = tx.log_events?.find(
+              (log: any) =>
+                log.decoded?.name && !log.decoded.name.includes("Metadata")
+            );
+
+            return {
+              hash: tx.tx_hash,
+              from: tx.from_address,
+              to: tx.to_address || "",
+              value: tx.value?.toString() || "0",
+              timeStamp: new Date(tx.block_signed_at).getTime().toString(),
+              isError: tx.successful ? "0" : "1",
+              functionName: relevantLog?.decoded?.name || "Transfer",
+              // Add type to easily determine direction in UI
+              type:
+                tx.from_address?.toLowerCase() === address.toLowerCase()
+                  ? "sent"
+                  : "received",
+            };
+          });
+
+        setTransactions(transactions);
       } catch (error) {
         console.error("Failed to fetch transactions:", error);
       } finally {
@@ -161,7 +211,7 @@ export function TransactionHistory() {
     };
 
     fetchTransactions();
-  }, [address]);
+  }, [address, chainId]);
 
   const filteredTransactions = transactions.filter(
     (tx) =>
@@ -293,10 +343,10 @@ export function TransactionHistory() {
                         <div className="flex items-center gap-2">
                           {tx.isError === "1" ? (
                             <AlertTriangle className="h-4 w-4 text-red-400" />
-                          ) : tx.functionName === "transfer" ? (
-                            <ArrowUpRight className="h-4 w-4 text-emerald-400" />
+                          ) : tx.type === "sent" ? (
+                            <ArrowUpRight className="h-4 w-4 text-blue-400" />
                           ) : (
-                            <ArrowDownLeft className="h-4 w-4 text-blue-400" />
+                            <ArrowDownLeft className="h-4 w-4 text-emerald-400" />
                           )}
                           <span className="font-medium text-zinc-200">
                             {tx.functionName || "Transaction"}
@@ -305,9 +355,9 @@ export function TransactionHistory() {
                         <div className="flex items-center gap-2">
                           <span
                             className={`text-sm font-medium ${
-                              tx.functionName === "transfer"
-                                ? "text-emerald-400"
-                                : "text-blue-400"
+                              tx.from.toLowerCase() === address?.toLowerCase()
+                                ? "text-blue-400"
+                                : "text-emerald-400"
                             }`}
                           >
                             {formatEther(BigInt(tx.value))} ETH
