@@ -20,6 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useStore } from "@/store/store";
+import { GoldRushClient, Chains } from "@covalenthq/client-sdk";
 
 interface TokenBalance {
   contractAddress: string;
@@ -30,6 +31,12 @@ interface TokenBalance {
 }
 
 interface TokenBalanceResponse {
+  status: string;
+  message: string;
+  result: string;
+}
+
+interface NativeBalanceResponse {
   status: string;
   message: string;
   result: string;
@@ -59,6 +66,33 @@ async function fetchTokenBalance(
 
   if (!response.ok) {
     throw new Error("Failed to fetch token balance");
+  }
+
+  return response.json();
+}
+
+async function fetchNativeBalance(
+  address: string,
+  chainId: number
+): Promise<NativeBalanceResponse> {
+  const domain =
+    chainId === 167009
+      ? "api-hekla.taikoscan.io"
+      : chainId === 167000
+      ? "api.taikoscan.io"
+      : "api.etherscan.io";
+
+  const apiKey =
+    chainId === 167000 || chainId === 167009
+      ? process.env.NEXT_PUBLIC_TAIKOSCAN_API_KEY
+      : process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY;
+
+  const response = await fetch(
+    `https://${domain}/api?module=account&action=balance&address=${address}&tag=latest&apikey=${apiKey}`
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch native balance");
   }
 
   return response.json();
@@ -122,25 +156,9 @@ const NETWORK_TOKENS: Record<
   ],
 };
 
-// Dummy balances for demonstration
-const DUMMY_BALANCES: Record<string, string> = {
-  "0xdac17f958d2ee523a2206206994597c13d831ec7": "1000000000", // 1000 USDT
-  "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "500000000", // 500 USDC
-  "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": "50000000", // 0.5 WBTC
-  "0x7b1a3117B2b9BE3a3C31e5a097c7F890199666aC": "1000000000000000000000", // 1000 HORSE
-  "0x8a1F182358AE7C1B6E743F9A8E72B498Dc306aF7": "2000000000000000000000", // 2000 TTKO
-  "0xae2C46ddb314B9Ba743C6dEE4878F151881333D9": "2000000000", // 2000 USDT
-  "0x5C038147fC0A8c209fb56e6A3933F56bA76BD4D5": "3000000000", // 3000 USDC
-};
-
-// Add price data for value calculation
-const TOKEN_PRICES: Record<string, number> = {
-  USDT: 1.0,
-  USDC: 1.0,
-  WBTC: 65000,
-  HORSE: 2.5,
-  TTKO: 5.0,
-};
+// Comment out or remove dummy data
+// const DUMMY_BALANCES: Record<string, string> = { ... }
+// const TOKEN_PRICES: Record<string, number> = { ... }
 
 export function TokenBalances() {
   const { address, chainId } = useAccount();
@@ -151,18 +169,122 @@ export function TokenBalances() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const { reset } = useStore();
 
-  // Calculate total value of all tokens
+  // Update fetchBalances function
+  useEffect(() => {
+    async function fetchBalances() {
+      if (!address || !chainId) return;
+
+      try {
+        setIsLoading(true);
+
+        // Fetch native balance first
+        const nativeBalanceResponse = await fetchNativeBalance(
+          address,
+          chainId
+        );
+
+        // Create native token balance object
+        const nativeToken: TokenBalance = {
+          contractAddress: "0x0000000000000000000000000000000000000000", // ETH/Native token address
+          balance:
+            nativeBalanceResponse.status === "1"
+              ? nativeBalanceResponse.result
+              : "0",
+          symbol: chainId === 1 ? "ETH" : chainId === 167009 ? "ETH" : "TKO",
+          decimals: 18,
+          name:
+            chainId === 1
+              ? "Ethereum"
+              : chainId === 167009
+              ? "Ethereum"
+              : "Taiko",
+        };
+
+        // Fetch other token balances
+        const tokens = NETWORK_TOKENS[chainId] || [];
+        const balancePromises = tokens.map((token) =>
+          fetchTokenBalance(address, token.address, chainId)
+        );
+
+        const balanceResponses = await Promise.allSettled(balancePromises);
+
+        const tokenBalances = balanceResponses.map((response, index) => {
+          const token = tokens[index];
+          let balance = "0";
+
+          if (
+            response.status === "fulfilled" &&
+            response.value.status === "1"
+          ) {
+            balance = response.value.result;
+          }
+
+          return {
+            contractAddress: token.address,
+            balance,
+            symbol: token.symbol,
+            decimals: token.decimals,
+            name: token.name,
+          };
+        });
+
+        // Combine native token with other tokens
+        const allBalances = [nativeToken, ...tokenBalances];
+
+        // Filter out zero balances
+        const nonZeroBalances = allBalances.filter(
+          (token) => BigInt(token.balance) > BigInt(0)
+        );
+
+        setTokenBalances(nonZeroBalances);
+      } catch (error) {
+        console.error("Failed to fetch balances:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchBalances();
+  }, [address, chainId]);
+
+  useEffect(() => {
+    const client = new GoldRushClient(
+      process.env.NEXT_PUBLIC_GOLDRUSH_API_KEY!
+    );
+
+    const ApiServices = async () => {
+      try {
+        const balanceResp =
+          await client.BalanceService.getTokenBalancesForWalletAddress(
+            "eth-mainnet",
+            "demo.eth"
+          );
+
+        if (balanceResp.error) {
+          throw balanceResp;
+        }
+
+        console.log(balanceResp.data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    ApiServices();
+  }, []);
+
+  // Temporarily use a simple value calculation without prices
   const calculateTotalValue = (balances: TokenBalance[]): number => {
     return balances.reduce((total, token) => {
       const balance = Number(
         formatUnits(BigInt(token.balance), token.decimals)
       );
-      const price = TOKEN_PRICES[token.symbol] || 0;
-      return total + balance * price;
+      // For now, just use the balance as the value
+      return total + balance;
     }, 0);
   };
 
-  // Filter and sort tokens
+  // Update the filtered and sorted tokens to not rely on TOKEN_PRICES
   const filteredAndSortedTokens = useMemo(() => {
     let filtered = tokenBalances.filter((token) => {
       const searchLower = searchQuery.toLowerCase();
@@ -175,59 +297,21 @@ export function TokenBalances() {
     return filtered.sort((a, b) => {
       const balanceA = Number(formatUnits(BigInt(a.balance), a.decimals));
       const balanceB = Number(formatUnits(BigInt(b.balance), b.decimals));
-      const valueA = balanceA * (TOKEN_PRICES[a.symbol] || 0);
-      const valueB = balanceB * (TOKEN_PRICES[b.symbol] || 0);
 
       let comparison = 0;
       switch (sortBy) {
         case "value":
-          comparison = valueA - valueB;
+        case "balance":
+          comparison = balanceA - balanceB;
           break;
         case "name":
           comparison = a.name.localeCompare(b.name);
-          break;
-        case "balance":
-          comparison = balanceA - balanceB;
           break;
       }
 
       return sortDirection === "asc" ? comparison : -comparison;
     });
   }, [tokenBalances, searchQuery, sortBy, sortDirection]);
-
-  // Fetch token balances
-  useEffect(() => {
-    async function fetchBalances() {
-      if (!address || !chainId) return;
-
-      try {
-        setIsLoading(true);
-        const tokens = NETWORK_TOKENS[chainId] || [];
-
-        // For demo purposes, use dummy balances
-        const balances = tokens.map((token) => ({
-          contractAddress: token.address,
-          balance: DUMMY_BALANCES[token.address] || "0",
-          symbol: token.symbol,
-          decimals: token.decimals,
-          name: token.name,
-        }));
-
-        // Filter out zero balances
-        const nonZeroBalances = balances.filter(
-          (token) => BigInt(token.balance) > BigInt(0)
-        );
-
-        setTokenBalances(nonZeroBalances);
-      } catch (error) {
-        console.error("Failed to fetch token balances:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchBalances();
-  }, [address, chainId]);
 
   if (!address) {
     return (
@@ -254,8 +338,6 @@ export function TokenBalances() {
     );
   }
 
-  const totalValue = calculateTotalValue(tokenBalances);
-
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-6">
@@ -281,7 +363,10 @@ export function TokenBalances() {
             Portfolio Value
           </h2>
           <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-            ${totalValue.toLocaleString("en-US", { maximumFractionDigits: 2 })}
+            $
+            {calculateTotalValue(tokenBalances).toLocaleString("en-US", {
+              maximumFractionDigits: 2,
+            })}
           </div>
         </motion.div>
         {/* Search and Sort Controls */}
@@ -367,8 +452,8 @@ export function TokenBalances() {
                   const balance = Number(
                     formatUnits(BigInt(token.balance), token.decimals)
                   );
-                  const value = balance * (TOKEN_PRICES[token.symbol] || 0);
-                  const percentage = (value / totalValue) * 100;
+                  const percentage =
+                    (balance / calculateTotalValue(tokenBalances)) * 100;
 
                   return (
                     <motion.div
@@ -411,12 +496,6 @@ export function TokenBalances() {
                                 maximumFractionDigits: 4,
                               })}{" "}
                               {token.symbol}
-                            </div>
-                            <div className="text-sm text-zinc-400">
-                              $
-                              {value.toLocaleString("en-US", {
-                                maximumFractionDigits: 2,
-                              })}
                             </div>
                           </div>
                         </div>
