@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Menu, MessageSquare, History, Wallet } from "lucide-react";
+import { MessageSquare, History, Wallet } from "lucide-react";
 import { useStore, NavItem } from "@/store/store";
+import Image from "next/image";
 
 interface NavItemAngs {
   icon: React.ElementType;
@@ -200,16 +201,23 @@ const CircularNav = () => {
       >
         {/* Enhanced Central Button */}
         <button
-          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 p-4 rounded-full 
-          bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-lg 
+          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 rounded-full 
+          bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-lg w-14 h-14
           transition-all duration-300 group ${
             isOpen ? "scale-110" : "hover:scale-105"
           }
           border-2 border-blue-300/50 backdrop-blur-sm`}
         >
-          <Menu
-            size={24}
-            className="group-hover:rotate-90 transition-transform duration-300"
+          <Image
+            src="/echo.png"
+            alt="Echo Logo"
+            width={56}
+            height={56}
+            className={`${
+              selectedNavItem === null || selectedNavItem === NavItem.AIChat
+                ? "rotate-0"
+                : "rotate-180"
+            } group-hover:rotate-180 transition-transform duration-300 object-cover w-full h-full`}
           />
           <div className="absolute inset-0 rounded-full bg-blue-400/30 animate-pulse" />
         </button>
@@ -240,7 +248,7 @@ const CircularNav = () => {
                     backdrop-blur-md border-2 border-blue-300/50 group relative`}
                   >
                     <Icon
-                      size={20}
+                      size={14}
                       className={`transition-transform duration-300 ${
                         tempSelectedItem === item.label
                           ? "scale-110"
