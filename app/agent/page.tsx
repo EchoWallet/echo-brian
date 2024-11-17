@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -112,6 +112,10 @@ export default function Component() {
     });
 
   const { selectedNavItem } = useStore();
+
+  const [showError, setShowError] = useState(false);
+  const [showConfirming, setShowConfirming] = useState(false);
+  const [showConfirmed, setShowConfirmed] = useState(false);
 
   const sendTx = async (message: string) => {
     try {
@@ -265,6 +269,22 @@ export default function Component() {
       }
     }
   };
+
+  useEffect(() => {
+    if (error || isConfirming || isConfirmed) {
+      if (error) setShowError(true);
+      if (isConfirming) setShowConfirming(true);
+      if (isConfirmed) setShowConfirmed(true);
+
+      const timer = setTimeout(() => {
+        setShowError(false);
+        setShowConfirming(false);
+        setShowConfirmed(false);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error, isConfirming, isConfirmed]);
 
   return (
     <div className="flex flex-col h-screen relative overflow-hidden">
@@ -468,25 +488,26 @@ export default function Component() {
 
                 {/* Status Messages */}
                 <AnimatePresence>
-                  {(error || isConfirming || isConfirmed) && (
+                  {(showError || showConfirming || showConfirmed) && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
                       className="absolute -top-16 left-0 right-0 px-4"
                     >
-                      {error && (
+                      {showError && (
                         <div className="text-red-300 bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-2 backdrop-blur-sm">
-                          Error: {(error as any).shortMessage || error.message}
+                          Error:{" "}
+                          {(error as any)?.shortMessage || error?.message}
                         </div>
                       )}
-                      {isConfirming && (
+                      {showConfirming && (
                         <div className="text-blue-300 bg-blue-500/5 border border-blue-500/10 rounded-lg px-4 py-2 backdrop-blur-sm flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Waiting for confirmation...
                         </div>
                       )}
-                      {isConfirmed && (
+                      {showConfirmed && (
                         <div className="text-emerald-300 bg-emerald-500/5 border border-emerald-500/10 rounded-lg px-4 py-2 backdrop-blur-sm">
                           Transaction confirmed! ✨
                         </div>
