@@ -28,7 +28,6 @@ type Message = {
   sender: "user" | "ai";
 };
 
-
 export default function Component() {
   const { address, chainId } = useAccount();
   const [messages, setMessages] = useState<Message[]>([
@@ -425,7 +424,11 @@ export default function Component() {
                     >
                       {showError && (
                         <div className="text-red-300 bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-2 backdrop-blur-sm">
-                          Error: {(error as Error)?.message || "An error occurred"}
+                          Error:{" "}
+                          {error?.message?.includes("User rejected")
+                            ? "Transaction rejected by user"
+                            : error?.message?.split(".")[0] ||
+                              "An error occurred"}
                         </div>
                       )}
                       {showConfirming && (
