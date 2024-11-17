@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { MessageSquare, History, Wallet } from "lucide-react";
 import { useStore, NavItem } from "@/store/store";
 import Image from "next/image";
@@ -14,7 +14,6 @@ interface NavItemAngs {
 const CircularNav = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [angle, setAngle] = useState(0);
   const [tempSelectedItem, setTempSelectedItem] = useState<NavItem | null>(
     null
   );
@@ -37,7 +36,7 @@ const CircularNav = () => {
     };
   };
 
-  const handleMouseMove = (e: React.MouseEvent | MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent | MouseEvent) => {
     if (!isDragging) return;
 
     const viewportX = "clientX" in e ? e.clientX : (e as MouseEvent).clientX;
@@ -54,9 +53,7 @@ const CircularNav = () => {
 
     let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
     if (angle < 0) angle += 360;
-    setAngle(angle);
 
-    // Update temporary selected item based on angle
     if (angle >= 0 && angle < 22.5) {
       setTempSelectedItem(NavItem.Assets);
     } else if (angle >= 22.5 && angle < 67.5) {
@@ -66,7 +63,7 @@ const CircularNav = () => {
     } else {
       setTempSelectedItem(null);
     }
-  };
+  }, [isDragging]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     dragStartRef.current = { x: e.clientX, y: e.clientY };
@@ -130,7 +127,7 @@ const CircularNav = () => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [isDragging, tempSelectedItem, setSelectedNavItem]);
+  }, [isDragging, tempSelectedItem, setSelectedNavItem, handleMouseMove]);
 
   const waveGroups = [
     {
@@ -225,7 +222,7 @@ const CircularNav = () => {
         {/* Navigation Items with enhanced effects */}
         {isOpen && (
           <div className="absolute inset-0 z-0">
-            {navItems.map((item, index) => {
+            {navItems.map((item) => {
               const { x, y } = getCoordinates(item.angle, 100);
               const Icon = item.icon;
               return (

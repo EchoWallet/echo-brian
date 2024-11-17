@@ -4,24 +4,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import {
-  Menu,
-  Settings,
-  Bell,
-  Wallet,
-  PaperclipIcon,
-  Mic,
-  Send,
-  Loader2,
-} from "lucide-react";
+import { PaperclipIcon, Mic, Send, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import ReactMarkdown from "react-markdown";
@@ -44,39 +28,6 @@ type Message = {
   sender: "user" | "ai";
 };
 
-type TransactionStep = {
-  chainId: number;
-  to: string;
-  data: string;
-  value: string;
-  gasLimit: string;
-  blockNumber: number;
-  from: string;
-};
-
-type Action =
-  | "swap"
-  | "transfer"
-  | "bridge"
-  | "balance"
-  | "wrap native"
-  | "unwrap native"
-  | "totalsupply"
-  | "approve"
-  | "deposit"
-  | "stake on Lido"
-  | "withdraw"
-  | "ENS Forward Resolution"
-  | "ENS Reverse Resolution"
-  | "ENS Availability"
-  | "ENS Expiration"
-  | "ENS Registration Cost"
-  | "ENS Renewal Cost"
-  | "ENS Registration"
-  | "ENS Renewal"
-  | "AAVE Borrow"
-  | "AAVE Repay"
-  | "Aave User Data";
 
 export default function Component() {
   const { address, chainId } = useAccount();
@@ -153,30 +104,7 @@ export default function Component() {
 
       // Check if the action is valid
       const action: string = result.completion[0].action;
-      const validActions = [
-        "swap",
-        "transfer",
-        "bridge",
-        "balance",
-        "wrap native",
-        "unwrap native",
-        "totalsupply",
-        "approve",
-        "deposit",
-        "stake on Lido",
-        "withdraw",
-        "ENS Forward Resolution",
-        "ENS Reverse Resolution",
-        "ENS Availability",
-        "ENS Expiration",
-        "ENS Registration Cost",
-        "ENS Renewal Cost",
-        "ENS Registration",
-        "ENS Renewal",
-        "AAVE Borrow",
-        "AAVE Repay",
-        "Aave User Data",
-      ];
+      // const validActions = [ ... ];
 
       if (action == "askbrian") {
         const askResult = await brian.ask({
@@ -227,12 +155,12 @@ export default function Component() {
           to: step.to as `0x${string}`,
           data: step.data as `0x${string}`,
           value: BigInt(step.value || "0"),
-          // @ts-ignore
+          // @ts-expect-error gas property type mismatch with wagmi
           gas: BigInt(step.gasLimit!),
           chainId: step.chainId,
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Transaction failed:", error);
       setMessages((prev) => [
         ...prev,
@@ -240,7 +168,7 @@ export default function Component() {
           id: prev.length + 1,
           text:
             "Transaction failed: " +
-            ((error as any)?.shortMessage || "Please try again"),
+            ((error as Error)?.message || "Please try again"),
           sender: "ai",
         },
       ]);
@@ -497,8 +425,7 @@ export default function Component() {
                     >
                       {showError && (
                         <div className="text-red-300 bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-2 backdrop-blur-sm">
-                          Error:{" "}
-                          {(error as any)?.shortMessage || error?.message}
+                          Error: {(error as Error)?.message || "An error occurred"}
                         </div>
                       )}
                       {showConfirming && (

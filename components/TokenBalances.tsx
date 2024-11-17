@@ -20,7 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useStore } from "@/store/store";
-import { GoldRushClient, Chain, ChainName } from "@covalenthq/client-sdk";
+import { GoldRushClient, ChainName } from "@covalenthq/client-sdk";
 
 interface TokenBalance {
   contractAddress: string;
@@ -33,132 +33,6 @@ interface TokenBalance {
   logoUrl?: string | null;
 }
 
-interface TokenBalanceResponse {
-  status: string;
-  message: string;
-  result: string;
-}
-
-interface NativeBalanceResponse {
-  status: string;
-  message: string;
-  result: string;
-}
-
-async function fetchTokenBalance(
-  address: string,
-  contractAddress: string,
-  chainId: number
-): Promise<TokenBalanceResponse> {
-  // Select the appropriate domain based on chainId
-  const domain =
-    chainId === 167009
-      ? "api-hekla.taikoscan.io"
-      : chainId === 167000
-      ? "api.taikoscan.io"
-      : "api.etherscan.io";
-
-  const apiKey =
-    chainId === 167000 || chainId === 167009
-      ? process.env.NEXT_PUBLIC_TAIKOSCAN_API_KEY
-      : process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY;
-
-  const response = await fetch(
-    `https://${domain}/api?module=account&action=tokenbalance&address=${address}&contractaddress=${contractAddress}&tag=latest&apikey=${apiKey}`
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch token balance");
-  }
-
-  return response.json();
-}
-
-async function fetchNativeBalance(
-  address: string,
-  chainId: number
-): Promise<NativeBalanceResponse> {
-  const domain =
-    chainId === 167009
-      ? "api-hekla.taikoscan.io"
-      : chainId === 167000
-      ? "api.taikoscan.io"
-      : "api.etherscan.io";
-
-  const apiKey =
-    chainId === 167000 || chainId === 167009
-      ? process.env.NEXT_PUBLIC_TAIKOSCAN_API_KEY
-      : process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY;
-
-  const response = await fetch(
-    `https://${domain}/api?module=account&action=balance&address=${address}&tag=latest&apikey=${apiKey}`
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch native balance");
-  }
-
-  return response.json();
-}
-
-// Dummy token data for different networks
-const NETWORK_TOKENS: Record<
-  number,
-  Array<{ address: string; symbol: string; decimals: number; name: string }>
-> = {
-  1: [
-    // Ethereum Mainnet
-    {
-      address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-      symbol: "USDT",
-      decimals: 6,
-      name: "Tether USD",
-    },
-    {
-      address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      symbol: "USDC",
-      decimals: 6,
-      name: "USD Coin",
-    },
-    {
-      address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-      symbol: "WBTC",
-      decimals: 8,
-      name: "Wrapped Bitcoin",
-    },
-  ],
-  167000: [
-    // Taiko
-    {
-      address: "0x7b1a3117B2b9BE3a3C31e5a097c7F890199666aC",
-      symbol: "HORSE",
-      decimals: 18,
-      name: "Horse Token",
-    },
-    {
-      address: "0x8a1F182358AE7C1B6E743F9A8E72B498Dc306aF7",
-      symbol: "TTKO",
-      decimals: 18,
-      name: "Test Taiko",
-    },
-  ],
-  167009: [
-    // Taiko Hekla
-    {
-      address: "0xae2C46ddb314B9Ba743C6dEE4878F151881333D9",
-      symbol: "USDT",
-      decimals: 6,
-      name: "Hekla USDT",
-    },
-    {
-      address: "0x5C038147fC0A8c209fb56e6A3933F56bA76BD4D5",
-      symbol: "USDC",
-      decimals: 6,
-      name: "Hekla USDC",
-    },
-  ],
-};
-
 export const CHAINID_TO_CHAINNAME: Record<number, ChainName> = {
   1: ChainName.ETH_MAINNET,
   11155111: ChainName.ETH_SEPOLIA,
@@ -169,10 +43,6 @@ export const CHAINID_TO_CHAINNAME: Record<number, ChainName> = {
   167000: ChainName.TAIKO_MAINNET,
   167009: ChainName.TAIKO_HEKLA_TESTNET,
 };
-
-// Comment out or remove dummy data
-// const DUMMY_BALANCES: Record<string, string> = { ... }
-// const TOKEN_PRICES: Record<string, number> = { ... }
 
 export function TokenBalances() {
   const { address, chainId } = useAccount();
@@ -270,7 +140,7 @@ export function TokenBalances() {
 
   // Update the filtered and sorted tokens to not rely on TOKEN_PRICES
   const filteredAndSortedTokens = useMemo(() => {
-    let filtered = tokenBalances.filter((token) => {
+    const filtered = tokenBalances.filter((token) => {
       const searchLower = searchQuery.toLowerCase();
       return (
         token.name.toLowerCase().includes(searchLower) ||

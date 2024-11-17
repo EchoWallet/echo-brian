@@ -4,7 +4,6 @@ import { useAccount } from "wagmi";
 import { useState, useEffect } from "react";
 import { formatEther } from "viem";
 import { ScrollArea } from "./ui/scroll-area";
-import { EtherscanProvider, Networkish } from "ethers";
 import {
   X,
   History,
@@ -38,107 +37,27 @@ interface Transaction {
   type: "sent" | "received";
 }
 
-interface TaikoApiResponse {
-  status: string;
-  message: string;
-  result: Transaction[];
+interface CovalentLogEvent {
+  decoded?: {
+    name: string;
+  };
 }
 
-class MyEtherscanProvider extends EtherscanProvider {
-  constructor(networkish: Networkish, apiKey?: string) {
-    super(networkish, apiKey);
-  }
-
-  async getHistory(
-    address: string,
-    startBlock?: number,
-    endBlock?: number
-  ): Promise<Array<any>> {
-    const params = {
-      action: "txlist",
-      address,
-      startblock: startBlock ?? 0,
-      endblock: endBlock ?? 99999999,
-      sort: "desc", // Changed to desc to get latest first
-    };
-
-    return this.fetch("account", params);
-  }
+interface CovalentTransactionItem {
+  tx_hash: string;
+  from_address: string;
+  to_address: string | null;
+  value: string;
+  block_signed_at: string;
+  successful: boolean;
+  log_events?: CovalentLogEvent[];
 }
 
-async function fetchTaikoTransactions(
-  address: string,
-  chainId: number
-): Promise<Transaction[]> {
-  // Select the appropriate domain based on chainId
-  const domain =
-    chainId === 167009 ? "api-hekla.taikoscan.io" : "api.taikoscan.io";
-
-  const response = await fetch(
-    `https://${domain}/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=50&sort=desc&apikey=${process.env.NEXT_PUBLIC_TAIKOSCAN_API_KEY}`
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch from Taiko API");
-  }
-
-  const data: TaikoApiResponse = await response.json();
-  return data.result;
+interface CovalentResponse {
+  data: {
+    items: CovalentTransactionItem[];
+  };
 }
-
-// Add dummy transaction data
-const DUMMY_TRANSACTIONS: Transaction[] = [
-  {
-    hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-    from: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-    to: "0x123d35Cc6634C0532925a3b844Bc454e4438f123",
-    value: "1000000000000000000", // 1 ETH
-    timeStamp: (Date.now() / 1000 - 3600).toString(), // 1 hour ago
-    isError: "0",
-    functionName: "transfer",
-    type: "sent",
-  },
-  {
-    hash: "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
-    from: "0x123d35Cc6634C0532925a3b844Bc454e4438f123",
-    to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-    value: "500000000000000000", // 0.5 ETH
-    timeStamp: (Date.now() / 1000 - 7200).toString(), // 2 hours ago
-    isError: "0",
-    functionName: "swap",
-    type: "received",
-  },
-  {
-    hash: "0x9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba",
-    from: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-    to: "0x456d35Cc6634C0532925a3b844Bc454e4438f456",
-    value: "100000000000000000", // 0.1 ETH
-    timeStamp: (Date.now() / 1000 - 86400).toString(), // 1 day ago
-    isError: "1", // Failed transaction
-    functionName: "approve",
-    type: "sent",
-  },
-  {
-    hash: "0xfedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
-    from: "0x456d35Cc6634C0532925a3b844Bc454e4438f456",
-    to: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-    value: "2000000000000000000", // 2 ETH
-    timeStamp: (Date.now() / 1000 - 172800).toString(), // 2 days ago
-    isError: "0",
-    functionName: "bridge",
-    type: "received",
-  },
-  {
-    hash: "0x5432109876fedcba5432109876fedcba5432109876fedcba5432109876fedcba",
-    from: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-    to: "0x789d35Cc6634C0532925a3b844Bc454e4438f789",
-    value: "300000000000000000", // 0.3 ETH
-    timeStamp: (Date.now() / 1000 - 259200).toString(), // 3 days ago
-    isError: "0",
-    functionName: "stake",
-    type: "sent",
-  },
-];
 
 export function TransactionHistory() {
   const { address, chainId } = useAccount();
@@ -171,18 +90,17 @@ export function TransactionHistory() {
           options
         );
 
-        const data = await response.json();
+        const data: CovalentResponse = await response.json();
 
         const transactions = (data.data?.items || [])
-          // Filter transactions where address is either sender or receiver
           .filter(
-            (tx: any) =>
+            (tx: CovalentTransactionItem) =>
               tx.from_address?.toLowerCase() === address.toLowerCase() ||
               tx.to_address?.toLowerCase() === address.toLowerCase()
           )
-          .map((tx: any) => {
+          .map((tx: CovalentTransactionItem) => {
             const relevantLog = tx.log_events?.find(
-              (log: any) =>
+              (log: CovalentLogEvent) =>
                 log.decoded?.name && !log.decoded.name.includes("Metadata")
             );
 
@@ -194,11 +112,9 @@ export function TransactionHistory() {
               timeStamp: new Date(tx.block_signed_at).getTime().toString(),
               isError: tx.successful ? "0" : "1",
               functionName: relevantLog?.decoded?.name || "Transfer",
-              // Add type to easily determine direction in UI
-              type:
-                tx.from_address?.toLowerCase() === address.toLowerCase()
-                  ? "sent"
-                  : "received",
+              type: tx.from_address?.toLowerCase() === address.toLowerCase()
+                ? "sent" as const
+                : "received" as const,
             };
           });
 
